@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "aws-security-mcp-server": {
+      "command": "python",
+      "args": ["-m", "aws_security_mcp"],
+      "cwd": "c:\\Users\\racha\\OneDrive\\Desktop\\Repos\\aws-security-mcp-server",
+      "env": {
+        "AWS_REGION": "us-east-1",
+        "AWS_PROFILE": "default"
+      }
+    }
+  }
+}
