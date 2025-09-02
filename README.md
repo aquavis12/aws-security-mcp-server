@@ -39,20 +39,13 @@ A Model Context Protocol (MCP) server implementation for managing AWS security s
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/aws-security-mcp-server.git
+git clone https://github.com/aquavis12/aws-security-mcp-server.git
 cd aws-security-mcp-server
 
 # Install the package and dependencies
 pip install -e .
-```
 
-### Quick Test
-
-```bash
-# Test the server
-python test_server.py
-
-# Run the server directly
+# Run the server
 python -m aws_security_mcp
 ```
 
@@ -167,44 +160,17 @@ The server provides tools for the following AWS security services:
 - `waf_list_ip_sets` - List IP sets
 - `waf_list_rule_groups` - List rule groups
 
-## Development
 
-### Running Tests
-
-```bash
-# Run tests with coverage
-pytest --cov=aws_security_mcp tests/
-
-# Run type checks
-mypy src/aws_security_mcp
-
-# Run linting
-flake8 src/aws_security_mcp
-black src/aws_security_mcp
-isort src/aws_security_mcp
-```
 
 ### Project Structure
 
 ```
 aws-security-mcp-server/
-├── src/
-│   └── aws_security_mcp/
-│       ├── __init__.py
-│       ├── server.py
-│       ├── models.py
-│       └── services/
-│           ├── __init__.py
-│           ├── base.py
-│           ├── accessanalyzer.py
-│           ├── cloudtrail.py
-│           ├── config.py
-│           └── ...
-├── tests/
-├── mcp-config.json
-├── requirements.txt
-├── setup.py
-└── README.md
+├── src/aws_security_mcp/     # Main package
+│   ├── services/             # AWS service implementations
+│   └── server.py             # MCP server
+├── config/                   # Configuration files
+└── pyproject.toml            # Package configuration
 ```
 
 ## License

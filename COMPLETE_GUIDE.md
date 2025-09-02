@@ -7,13 +7,13 @@ A Model Context Protocol (MCP) server providing 66 AWS security tools across 20 
 
 ## Quick Start
 
-### 1. Test Server
 ```bash
-python test_server.py
-```
+# Clone and install
+git clone https://github.com/aquavis12/aws-security-mcp-server.git
+cd aws-security-mcp-server
+pip install -e .
 
-### 2. Run Server
-```bash
+# Run server
 python -m aws_security_mcp
 ```
 
