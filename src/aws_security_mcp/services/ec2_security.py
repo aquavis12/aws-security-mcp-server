@@ -87,6 +87,82 @@ class EC2SecurityService:
                     },
                     "required": ["bucket"]
                 }
+            ),
+            types.Tool(
+                name="s3_get_bucket_encryption",
+                description="Get S3 bucket encryption configuration",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "bucket": {
+                            "type": "string",
+                            "description": "Name of the S3 bucket"
+                        }
+                    },
+                    "required": ["bucket"]
+                }
+            ),
+            types.Tool(
+                name="s3_get_bucket_public_access_block",
+                description="Get S3 bucket public access block configuration",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "bucket": {
+                            "type": "string",
+                            "description": "Name of the S3 bucket"
+                        }
+                    },
+                    "required": ["bucket"]
+                }
+            ),
+            types.Tool(
+                name="ec2_describe_instances",
+                description="List EC2 instances with security details",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "instance_ids": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of instance IDs"
+                        },
+                        "max_results": {
+                            "type": "integer",
+                            "minimum": 5,
+                            "maximum": 1000,
+                            "default": 100
+                        }
+                    }
+                }
+            ),
+            types.Tool(
+                name="ec2_audit_key_pairs",
+                description="Audit EC2 key pairs and their usage",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "check_unused_keys": {
+                            "type": "boolean",
+                            "default": True,
+                            "description": "Check for unused key pairs"
+                        }
+                    }
+                }
+            ),
+            types.Tool(
+                name="ec2_audit_security_groups",
+                description="Audit security groups for risky configurations",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "check_open_ports": {
+                            "type": "boolean",
+                            "default": True,
+                            "description": "Check for open ports (0.0.0.0/0)"
+                        }
+                    }
+                }
             )
         ]
 
@@ -101,6 +177,12 @@ class EC2SecurityService:
                 return await self._list_buckets(arguments)
             elif name == "s3_get_bucket_policy":
                 return await self._get_bucket_policy(arguments)
+            elif name == "s3_get_bucket_encryption":
+                return await self._get_bucket_encryption(arguments)
+            elif name == "s3_get_bucket_public_access_block":
+                return await self._get_bucket_public_access_block(arguments)
+            elif name == "ec2_describe_instances":
+                return await self._describe_instances(arguments)
             else:
                 raise ValueError(f"Unknown EC2 Security tool: {name}")
 
@@ -166,3 +248,66 @@ class EC2SecurityService:
             if e.response["Error"]["Code"] == "NoSuchBucketPolicy":
                 return {"bucket": bucket, "policy": None, "message": "No bucket policy exists"}
             raise
+
+    async def _get_bucket_encryption(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Get S3 bucket encryption."""
+        bucket = arguments["bucket"]
+        
+        try:
+            response = self.s3_client.get_bucket_encryption(Bucket=bucket)
+            return {
+                "bucket": bucket,
+                "server_side_encryption_configuration": response.get("ServerSideEncryptionConfiguration")
+            }
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "ServerSideEncryptionConfigurationNotFoundError":
+                return {"bucket": bucket, "encryption": None, "message": "No encryption configuration"}
+            raise
+
+    async def _get_bucket_public_access_block(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Get S3 bucket public access block."""
+        bucket = arguments["bucket"]
+        
+        try:
+            response = self.s3_client.get_public_access_block(Bucket=bucket)
+            return {
+                "bucket": bucket,
+                "public_access_block_configuration": response.get("PublicAccessBlockConfiguration")
+            }
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "NoSuchPublicAccessBlockConfiguration":
+                return {"bucket": bucket, "public_access_block": None, "message": "No public access block configuration"}
+            raise
+
+    async def _describe_instances(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Describe EC2 instances."""
+        params = {}
+        if "instance_ids" in arguments:
+            params["InstanceIds"] = arguments["instance_ids"]
+        if "max_results" in arguments:
+            params["MaxResults"] = arguments["max_results"]
+
+        response = self.ec2_client.describe_instances(**params)
+        
+        instances = []
+        for reservation in response.get("Reservations", []):
+            for instance in reservation.get("Instances", []):
+                instances.append({
+                    "instance_id": instance.get("InstanceId"),
+                    "instance_type": instance.get("InstanceType"),
+                    "state": instance.get("State", {}).get("Name"),
+                    "vpc_id": instance.get("VpcId"),
+                    "subnet_id": instance.get("SubnetId"),
+                    "security_groups": instance.get("SecurityGroups", []),
+                    "public_ip_address": instance.get("PublicIpAddress"),
+                    "private_ip_address": instance.get("PrivateIpAddress"),
+                    "key_name": instance.get("KeyName"),
+                    "launch_time": instance.get("LaunchTime").isoformat() if instance.get("LaunchTime") else None,
+                    "tags": instance.get("Tags", [])
+                })
+        
+        return {
+            "instances": instances,
+            "total_count": len(instances),
+            "next_token": response.get("NextToken")
+        }

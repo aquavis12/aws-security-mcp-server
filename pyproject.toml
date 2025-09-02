@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "aws-security-mcp-server"
 version = "1.0.0"
-description = "MCP server for AWS Security services including IAM, KMS, ACM, Inspector, GuardDuty, Security Hub, Audit Manager, Network Firewall, WAF, Security Groups, and NACLs"
+description = "Comprehensive MCP server for AWS security management with 80+ tools across 21 AWS services including IAM auditing, EC2 security, S3 protection, KMS management, GuardDuty, Security Hub, and advanced compliance monitoring"
 authors = [
     {name = "Vishnu", email = "rachapudivishnu9@gmail.com"},
 ]

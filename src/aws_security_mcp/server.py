@@ -35,6 +35,7 @@ from .services.identitycenter import IdentityCenterService
 from .services.verifiedaccess import VerifiedAccessService
 from .services.vpclattice import VPCLatticeService
 
+
 # Configure logging
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
@@ -95,7 +96,8 @@ class AWSSecurityMCPServer:
             "ec2_security": EC2SecurityService,
             "identitycenter": IdentityCenterService,
             "verifiedaccess": VerifiedAccessService,
-            "vpclattice": VPCLatticeService
+            "vpclattice": VPCLatticeService,
+
         }
         
         for service_name, service_class in service_classes.items():
@@ -178,7 +180,8 @@ class AWSSecurityMCPServer:
             "s3_": "ec2_security",
             "identitycenter_": "identitycenter",
             "verifiedaccess_": "verifiedaccess",
-            "vpclattice_": "vpclattice"
+            "vpclattice_": "vpclattice",
+
         }
         
         for prefix, service in service_prefixes.items():
