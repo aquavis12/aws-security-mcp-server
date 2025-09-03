@@ -1,176 +1,34 @@
-"""KMS service implementation for AWS Security MCP Server."""
+"""KMS service."""
 
-import logging
-from typing import Any, Dict, List
-
-import boto3
-from botocore.exceptions import ClientError
 import mcp.types as types
+from .base import BaseAWSService
 
-logger = logging.getLogger(__name__)
+class KMSService(BaseAWSService):
+    def __init__(self, session):
+        super().__init__(session)
+        self.client = self.get_client("kms")
 
-
-class KMSService:
-    """Service for handling KMS operations."""
-
-    def __init__(self, session: boto3.Session):
-        """Initialize the KMS service."""
-        self.client = session.client("kms")
-
-    def get_tools(self) -> List[types.Tool]:
-        """Get available KMS tools."""
+    def get_tools(self):
         return [
-            types.Tool(
-                name="kms_list_keys",
-                description="List KMS keys",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "limit": {
-                            "type": "integer",
-                            "minimum": 1,
-                            "maximum": 1000,
-                            "default": 100
-                        }
-                    }
-                }
-            ),
-            types.Tool(
-                name="kms_describe_key",
-                description="Get details for a specific KMS key",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "key_id": {
-                            "type": "string",
-                            "description": "The key ID or ARN"
-                        }
-                    },
-                    "required": ["key_id"]
-                }
-            ),
-            types.Tool(
-                name="kms_get_key_rotation_status",
-                description="Get key rotation status",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "key_id": {
-                            "type": "string",
-                            "description": "The key ID or ARN"
-                        }
-                    },
-                    "required": ["key_id"]
-                }
-            ),
-            types.Tool(
-                name="kms_list_aliases",
-                description="List KMS key aliases",
-                inputSchema={"type": "object", "properties": {}}
-            ),
-            types.Tool(
-                name="kms_audit_key_usage",
-                description="Audit KMS key usage and permissions",
-                inputSchema={"type": "object", "properties": {}}
-            )
+            types.Tool(name="kms_list_keys", description="List KMS keys", inputSchema={"type": "object", "properties": {}}),
+            types.Tool(name="kms_describe_key", description="Get key details", inputSchema={"type": "object", "properties": {"key_id": {"type": "string"}}, "required": ["key_id"]}),
+            types.Tool(name="kms_get_key_rotation_status", description="Get key rotation status", inputSchema={"type": "object", "properties": {"key_id": {"type": "string"}}, "required": ["key_id"]}),
+            types.Tool(name="kms_list_aliases", description="List KMS key aliases", inputSchema={"type": "object", "properties": {}}),
+            types.Tool(name="kms_audit_key_usage", description="Audit KMS key usage", inputSchema={"type": "object", "properties": {}})
         ]
 
-    async def handle_tool_call(self, name: str, arguments: Dict[str, Any]) -> Any:
-        """Handle KMS tool calls."""
+    async def handle_tool_call(self, name, arguments):
         try:
             if name == "kms_list_keys":
-                return await self._list_keys(arguments)
+                return {"keys": self.client.list_keys().get("Keys", [])}
             elif name == "kms_describe_key":
-                return await self._describe_key(arguments)
+                return {"key": self.client.describe_key(KeyId=arguments["key_id"])["KeyMetadata"]}
             elif name == "kms_get_key_rotation_status":
-                return await self._get_key_rotation_status(arguments)
+                return {"rotation_enabled": self.client.get_key_rotation_status(KeyId=arguments["key_id"])["KeyRotationEnabled"]}
             elif name == "kms_list_aliases":
-                return await self._list_aliases()
+                return {"aliases": self.client.list_aliases().get("Aliases", [])}
             elif name == "kms_audit_key_usage":
-                return await self._audit_key_usage()
-            else:
-                raise ValueError(f"Unknown KMS tool: {name}")
-
-        except ClientError as e:
-            logger.error(f"AWS client error in {name}: {e}")
-            return {"error": str(e), "service": "kms", "operation": name}
+                keys = self.client.list_keys().get("Keys", [])
+                return {"total_keys": len(keys), "keys": keys[:10]}
         except Exception as e:
-            logger.error(f"Unexpected error in {name}: {e}")
-            return {"error": str(e), "service": "kms", "operation": name}
-
-    async def _list_keys(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """List KMS keys."""
-        params = {}
-        if "limit" in arguments:
-            params["Limit"] = arguments["limit"]
-
-        response = self.client.list_keys(**params)
-        
-        keys = []
-        for key in response.get("Keys", []):
-            keys.append({
-                "key_id": key["KeyId"],
-                "key_arn": key["KeyArn"]
-            })
-
-        return {
-            "keys": keys,
-            "total_count": len(keys),
-            "truncated": response.get("Truncated", False)
-        }
-
-    async def _describe_key(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Describe a KMS key."""
-        key_id = arguments["key_id"]
-        response = self.client.describe_key(KeyId=key_id)
-        
-        key_metadata = response["KeyMetadata"]
-        return {
-            "key_id": key_metadata["KeyId"],
-            "arn": key_metadata["Arn"],
-            "creation_date": key_metadata["CreationDate"].isoformat(),
-            "enabled": key_metadata["Enabled"],
-            "description": key_metadata.get("Description"),
-            "key_usage": key_metadata["KeyUsage"],
-            "key_state": key_metadata["KeyState"],
-            "origin": key_metadata["Origin"],
-            "key_manager": key_metadata["KeyManager"]
-        }
-
-    async def _get_key_rotation_status(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Get key rotation status."""
-        key_id = arguments["key_id"]
-        response = self.client.get_key_rotation_status(KeyId=key_id)
-        
-        return {
-            "key_id": key_id,
-            "key_rotation_enabled": response["KeyRotationEnabled"]
-        }
-
-    async def _list_aliases(self) -> Dict[str, Any]:
-        """List KMS key aliases."""
-        response = self.client.list_aliases()
-        return {"aliases": response.get("Aliases", [])}
-
-    async def _audit_key_usage(self) -> Dict[str, Any]:
-        """Audit KMS key usage and permissions."""
-        keys_response = self.client.list_keys()
-        audit_results = []
-        
-        for key in keys_response.get("Keys", []):
-            key_id = key["KeyId"]
-            try:
-                key_details = self.client.describe_key(KeyId=key_id)
-                rotation_status = self.client.get_key_rotation_status(KeyId=key_id)
-                
-                audit_results.append({
-                    "key_id": key_id,
-                    "enabled": key_details["KeyMetadata"]["Enabled"],
-                    "key_state": key_details["KeyMetadata"]["KeyState"],
-                    "rotation_enabled": rotation_status["KeyRotationEnabled"],
-                    "key_manager": key_details["KeyMetadata"]["KeyManager"]
-                })
-            except ClientError:
-                continue
-        
-        return {"key_audit_results": audit_results}
+            return {"error": str(e)}
