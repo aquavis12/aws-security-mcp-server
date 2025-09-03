@@ -17,7 +17,10 @@ class SecurityAuditService(BaseAWSService):
         try:
             if name == "security_audit_generate_report":
                 return {
-                    "report": "Security Audit Report",
+                    "report": await self._generate_security_report(),
+                    "summary": await self._get_audit_summary(),
+                    "recommendations": await self._get_security_recommendations()
+                }
                     "summary": "21 services audited, 80 tools available",
                     "recommendations": ["Enable MFA", "Rotate keys", "Review policies"]
                 }
