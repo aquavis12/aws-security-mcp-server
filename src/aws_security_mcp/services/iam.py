@@ -86,8 +86,36 @@ class IAMService:
                 name="iam_audit_unrotated_keys",
                 description="Find access keys not rotated for 180+ days",
                 inputSchema={"type": "object", "properties": {}}
-            ),
-            types.Tool(
+    async def _audit_inactive_users(self) -> Dict[str, Any]:
+        """Audit inactive users (90+ days)."""
+        cutoff_date = datetime.utcnow() - timedelta(days=90)
+        response = self.client.list_users(MaxItems=100)
+        inactive_users = []
+        
+        for user in response.get("Users", []):
+            # Check both password and access key last usage
+            password_last_used = user.get("PasswordLastUsed")
+            latest_activity = password_last_used
+            
+            # Check access key usage
+            keys_response = self.client.list_access_keys(UserName=user["UserName"])
+            for key in keys_response.get("AccessKeyMetadata", []):
+                if key["Status"] == "Active":
+                    key_last_used = self.client.get_access_key_last_used(
+                        AccessKeyId=key["AccessKeyId"]
+                    ).get("AccessKeyLastUsed", {}).get("LastUsedDate")
+                    if key_last_used and (not latest_activity or key_last_used > latest_activity):
+                        latest_activity = key_last_used
+            
+            if not latest_activity or latest_activity < cutoff_date:
+                inactive_users.append({
+                    "user_name": user["UserName"],
+                    "last_activity": latest_activity.isoformat() if latest_activity else "Never",
+                    "risk": "HIGH" if not latest_activity else "MEDIUM",
+                    "days_inactive": (datetime.utcnow() - latest_activity).days if latest_activity else "N/A"
+                })
+        
+        return {"inactive_users": inactive_users, "total": len(inactive_users)}
                 name="iam_audit_overprivileged_policies",
                 description="Identify overprivileged IAM policies",
                 inputSchema={"type": "object", "properties": {}}
