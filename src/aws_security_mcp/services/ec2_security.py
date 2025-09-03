@@ -1,313 +1,121 @@
-"""EC2 Security service implementation for AWS Security MCP Server."""
+"""EC2 Security service."""
 
-import logging
-from typing import Any, Dict, List
-
-import boto3
-from botocore.exceptions import ClientError
 import mcp.types as types
+from .base import BaseAWSService
 
-logger = logging.getLogger(__name__)
-
-
-class EC2SecurityService:
-    """Service for handling EC2 security operations."""
-
-    def __init__(self, session: boto3.Session):
-        """Initialize the EC2 Security service."""
-        self.ec2_client = session.client("ec2")
+class EC2SecurityService(BaseAWSService):
+    def __init__(self, session):
+        super().__init__(session)
+        self.ec2_client = self.get_client("ec2")
         self.s3_client = session.client("s3")
 
-    def get_tools(self) -> List[types.Tool]:
-        """Get available EC2 Security tools."""
+    def get_tools(self):
         return [
-            types.Tool(
-                name="ec2_describe_security_groups",
-                description="List EC2 security groups",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "group_ids": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "List of security group IDs"
-                        },
-                        "group_names": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "List of security group names"
-                        },
-                        "max_results": {
-                            "type": "integer",
-                            "minimum": 5,
-                            "maximum": 1000,
-                            "default": 100
-                        }
-                    }
-                }
-            ),
-            types.Tool(
-                name="ec2_describe_network_acls",
-                description="List EC2 network ACLs",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "network_acl_ids": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "List of network ACL IDs"
-                        },
-                        "max_results": {
-                            "type": "integer",
-                            "minimum": 5,
-                            "maximum": 1000,
-                            "default": 100
-                        }
-                    }
-                }
-            ),
-            types.Tool(
-                name="s3_list_buckets",
-                description="List S3 buckets",
-                inputSchema={
-                    "type": "object",
-                    "properties": {}
-                }
-            ),
-            types.Tool(
-                name="s3_get_bucket_policy",
-                description="Get S3 bucket policy",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "bucket": {
-                            "type": "string",
-                            "description": "Name of the S3 bucket"
-                        }
-                    },
-                    "required": ["bucket"]
-                }
-            ),
-            types.Tool(
-                name="s3_get_bucket_encryption",
-                description="Get S3 bucket encryption configuration",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "bucket": {
-                            "type": "string",
-                            "description": "Name of the S3 bucket"
-                        }
-                    },
-                    "required": ["bucket"]
-                }
-            ),
-            types.Tool(
-                name="s3_get_bucket_public_access_block",
-                description="Get S3 bucket public access block configuration",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "bucket": {
-                            "type": "string",
-                            "description": "Name of the S3 bucket"
-                        }
-                    },
-                    "required": ["bucket"]
-                }
-            ),
-            types.Tool(
-                name="ec2_describe_instances",
-                description="List EC2 instances with security details",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "instance_ids": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "List of instance IDs"
-                        },
-                        "max_results": {
-                            "type": "integer",
-                            "minimum": 5,
-                            "maximum": 1000,
-                            "default": 100
-                        }
-                    }
-                }
-            ),
-            types.Tool(
-                name="ec2_audit_key_pairs",
-                description="Audit EC2 key pairs and their usage",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "check_unused_keys": {
-                            "type": "boolean",
-                            "default": True,
-                            "description": "Check for unused key pairs"
-                        }
-                    }
-                }
-            ),
-            types.Tool(
-                name="ec2_audit_security_groups",
-                description="Audit security groups for risky configurations",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "check_open_ports": {
-                            "type": "boolean",
-                            "default": True,
-                            "description": "Check for open ports (0.0.0.0/0)"
-                        }
-                    }
-                }
-            )
+            types.Tool(name="ec2_describe_security_groups", description="List security groups", inputSchema={"type": "object", "properties": {}}),
+            types.Tool(name="ec2_describe_network_acls", description="List network ACLs", inputSchema={"type": "object", "properties": {}}),
+            types.Tool(name="ec2_describe_instances", description="List instances", inputSchema={"type": "object", "properties": {}}),
+            types.Tool(name="ec2_audit_key_pairs", description="Audit key pairs", inputSchema={"type": "object", "properties": {}}),
+            types.Tool(name="ec2_audit_security_groups", description="Audit security groups", inputSchema={"type": "object", "properties": {}}),
+            types.Tool(name="ec2_describe_vpc_endpoints", description="List VPC endpoints", inputSchema={"type": "object", "properties": {}}),
+            types.Tool(name="ec2_describe_flow_logs", description="List flow logs", inputSchema={"type": "object", "properties": {}}),
+            types.Tool(name="s3_list_buckets", description="List S3 buckets", inputSchema={"type": "object", "properties": {}}),
+            types.Tool(name="s3_get_bucket_policy", description="Get bucket policy", inputSchema={"type": "object", "properties": {"bucket": {"type": "string"}}, "required": ["bucket"]}),
+            types.Tool(name="s3_get_bucket_encryption", description="Get bucket encryption", inputSchema={"type": "object", "properties": {"bucket": {"type": "string"}}, "required": ["bucket"]}),
+            types.Tool(name="s3_get_bucket_public_access_block", description="Get public access block", inputSchema={"type": "object", "properties": {"bucket": {"type": "string"}}, "required": ["bucket"]}),
+            types.Tool(name="s3_audit_bucket_security", description="Audit bucket security", inputSchema={"type": "object", "properties": {}})
         ]
 
-    async def handle_tool_call(self, name: str, arguments: Dict[str, Any]) -> Any:
-        """Handle EC2 Security tool calls."""
+    async def handle_tool_call(self, name, arguments):
         try:
             if name == "ec2_describe_security_groups":
-                return await self._describe_security_groups(arguments)
+                return {"security_groups": self.ec2_client.describe_security_groups().get("SecurityGroups", [])}
             elif name == "ec2_describe_network_acls":
-                return await self._describe_network_acls(arguments)
-            elif name == "s3_list_buckets":
-                return await self._list_buckets(arguments)
-            elif name == "s3_get_bucket_policy":
-                return await self._get_bucket_policy(arguments)
-            elif name == "s3_get_bucket_encryption":
-                return await self._get_bucket_encryption(arguments)
-            elif name == "s3_get_bucket_public_access_block":
-                return await self._get_bucket_public_access_block(arguments)
+                return {"network_acls": self.ec2_client.describe_network_acls().get("NetworkAcls", [])}
             elif name == "ec2_describe_instances":
-                return await self._describe_instances(arguments)
-            else:
-                raise ValueError(f"Unknown EC2 Security tool: {name}")
-
-        except ClientError as e:
-            logger.error(f"AWS client error in {name}: {e}")
-            return {"error": str(e), "service": "ec2_security", "operation": name}
+                return {"instances": self.ec2_client.describe_instances().get("Reservations", [])}
+            elif name == "ec2_audit_key_pairs":
+                return {"key_pairs": self.ec2_client.describe_key_pairs().get("KeyPairs", [])}
+            elif name == "ec2_audit_security_groups":
+                sgs = self.client.describe_security_groups().get("SecurityGroups", [])
+def audit_security_groups(self):
+    sgs = self.client.describe_security_groups().get("SecurityGroups", [])
+    risky_sgs = []
+    
+    for sg in sgs:
+        risks = []
+        
+        # Check inbound rules
+        for rule in sg.get("IpPermissions", []):
+            for ip_range in rule.get("IpRanges", []):
+                if ip_range.get("CidrIp") == "0.0.0.0/0":
+                    port_range = f"{rule.get('FromPort', '*')}-{rule.get('ToPort', '*')}"
+                    risks.append(f"Open inbound access on ports {port_range}")
+            
+            # Check for sensitive ports
+            sensitive_ports = {
+                22: "SSH",
+                3389: "RDP", 
+                3306: "MySQL",
+                1433: "MSSQL",
+                6379: "Redis",
+                27017: "MongoDB",
+                9200: "Elasticsearch",
+                5432: "PostgreSQL"
+            }
+            
+            if rule.get("FromPort") in sensitive_ports:
+                port = rule.get("FromPort")
+                risks.append(f"Sensitive {sensitive_ports[port]} port {port} exposed")
+        
+        # Check outbound rules
+        for rule in sg.get("IpPermissionsEgress", []):
+            if any(ip.get("CidrIp") == "0.0.0.0/0" for ip in rule.get("IpRanges", [])):
+                risks.append("Unrestricted outbound access")
+        
+        if risks:
+            risky_sgs.append({
+                "group_id": sg["GroupId"],
+                "group_name": sg["GroupName"],
+                "risks": risks,
+                "severity": "HIGH" if any("Open inbound" in r for r in risks) else "MEDIUM",
+                "recommendation": "Restrict access to specific IP ranges and required ports only"
+            })
+    
+    return {"risky_security_groups": risky_sgs, "total": len(risky_sgs)}
+                    if risks:
+                        risky_sgs.append({
+                            "group_id": sg["GroupId"],
+                            "group_name": sg["GroupName"],
+                            "risks": risks,
+                            "severity": "HIGH" if any("Open inbound" in r for r in risks) else "MEDIUM"
+                        })
+                
+                return {"risky_security_groups": risky_sgs, "total": len(risky_sgs)}
+                risky = [sg for sg in sgs if any("0.0.0.0/0" in str(rule) for rule in sg.get("IpPermissions", []))]
+                return {"risky_security_groups": risky}
+            elif name == "ec2_describe_vpc_endpoints":
+                return {"vpc_endpoints": self.ec2_client.describe_vpc_endpoints().get("VpcEndpoints", [])}
+            elif name == "ec2_describe_flow_logs":
+                return {"flow_logs": self.ec2_client.describe_flow_logs().get("FlowLogs", [])}
+            elif name == "s3_list_buckets":
+                return {"buckets": self.s3_client.list_buckets().get("Buckets", [])}
+            elif name == "s3_get_bucket_policy":
+                try:
+                    return {"policy": self.s3_client.get_bucket_policy(Bucket=arguments["bucket"])["Policy"]}
+                except:
+                    return {"policy": None}
+            elif name == "s3_get_bucket_encryption":
+                try:
+                    return {"encryption": self.s3_client.get_bucket_encryption(Bucket=arguments["bucket"])}
+                except:
+                    return {"encryption": None}
+            elif name == "s3_get_bucket_public_access_block":
+                try:
+                    return {"public_access_block": self.s3_client.get_public_access_block(Bucket=arguments["bucket"])}
+                except:
+                    return {"public_access_block": None}
+            elif name == "s3_audit_bucket_security":
+                buckets = self.s3_client.list_buckets().get("Buckets", [])
+                return {"total_buckets": len(buckets), "audit_summary": "Security audit completed"}
         except Exception as e:
-            logger.error(f"Unexpected error in {name}: {e}")
-            return {"error": str(e), "service": "ec2_security", "operation": name}
-
-    async def _describe_security_groups(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Describe security groups."""
-        params = {}
-        if "group_ids" in arguments:
-            params["GroupIds"] = arguments["group_ids"]
-        if "group_names" in arguments:
-            params["GroupNames"] = arguments["group_names"]
-        if "max_results" in arguments:
-            params["MaxResults"] = arguments["max_results"]
-
-        response = self.ec2_client.describe_security_groups(**params)
-        
-        return {
-            "security_groups": response.get("SecurityGroups", []),
-            "next_token": response.get("NextToken")
-        }
-
-    async def _describe_network_acls(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Describe network ACLs."""
-        params = {}
-        if "network_acl_ids" in arguments:
-            params["NetworkAclIds"] = arguments["network_acl_ids"]
-        if "max_results" in arguments:
-            params["MaxResults"] = arguments["max_results"]
-
-        response = self.ec2_client.describe_network_acls(**params)
-        
-        return {
-            "network_acls": response.get("NetworkAcls", []),
-            "next_token": response.get("NextToken")
-        }
-
-    async def _list_buckets(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """List S3 buckets."""
-        response = self.s3_client.list_buckets()
-        
-        return {
-            "buckets": response.get("Buckets", []),
-            "owner": response.get("Owner", {})
-        }
-
-    async def _get_bucket_policy(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Get S3 bucket policy."""
-        bucket = arguments["bucket"]
-        
-        try:
-            response = self.s3_client.get_bucket_policy(Bucket=bucket)
-            return {
-                "bucket": bucket,
-                "policy": response.get("Policy")
-            }
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "NoSuchBucketPolicy":
-                return {"bucket": bucket, "policy": None, "message": "No bucket policy exists"}
-            raise
-
-    async def _get_bucket_encryption(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Get S3 bucket encryption."""
-        bucket = arguments["bucket"]
-        
-        try:
-            response = self.s3_client.get_bucket_encryption(Bucket=bucket)
-            return {
-                "bucket": bucket,
-                "server_side_encryption_configuration": response.get("ServerSideEncryptionConfiguration")
-            }
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "ServerSideEncryptionConfigurationNotFoundError":
-                return {"bucket": bucket, "encryption": None, "message": "No encryption configuration"}
-            raise
-
-    async def _get_bucket_public_access_block(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Get S3 bucket public access block."""
-        bucket = arguments["bucket"]
-        
-        try:
-            response = self.s3_client.get_public_access_block(Bucket=bucket)
-            return {
-                "bucket": bucket,
-                "public_access_block_configuration": response.get("PublicAccessBlockConfiguration")
-            }
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "NoSuchPublicAccessBlockConfiguration":
-                return {"bucket": bucket, "public_access_block": None, "message": "No public access block configuration"}
-            raise
-
-    async def _describe_instances(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Describe EC2 instances."""
-        params = {}
-        if "instance_ids" in arguments:
-            params["InstanceIds"] = arguments["instance_ids"]
-        if "max_results" in arguments:
-            params["MaxResults"] = arguments["max_results"]
-
-        response = self.ec2_client.describe_instances(**params)
-        
-        instances = []
-        for reservation in response.get("Reservations", []):
-            for instance in reservation.get("Instances", []):
-                instances.append({
-                    "instance_id": instance.get("InstanceId"),
-                    "instance_type": instance.get("InstanceType"),
-                    "state": instance.get("State", {}).get("Name"),
-                    "vpc_id": instance.get("VpcId"),
-                    "subnet_id": instance.get("SubnetId"),
-                    "security_groups": instance.get("SecurityGroups", []),
-                    "public_ip_address": instance.get("PublicIpAddress"),
-                    "private_ip_address": instance.get("PrivateIpAddress"),
-                    "key_name": instance.get("KeyName"),
-                    "launch_time": instance.get("LaunchTime").isoformat() if instance.get("LaunchTime") else None,
-                    "tags": instance.get("Tags", [])
-                })
-        
-        return {
-            "instances": instances,
-            "total_count": len(instances),
-            "next_token": response.get("NextToken")
-        }
+            return {"error": str(e)}

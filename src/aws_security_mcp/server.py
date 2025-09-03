@@ -34,6 +34,7 @@ from .services.ec2_security import EC2SecurityService
 from .services.identitycenter import IdentityCenterService
 from .services.verifiedaccess import VerifiedAccessService
 from .services.vpclattice import VPCLatticeService
+from .services.security_audit import SecurityAuditService
 
 
 # Configure logging
@@ -97,6 +98,7 @@ class AWSSecurityMCPServer:
             "identitycenter": IdentityCenterService,
             "verifiedaccess": VerifiedAccessService,
             "vpclattice": VPCLatticeService,
+            "security_audit": SecurityAuditService
 
         }
         
@@ -181,6 +183,7 @@ class AWSSecurityMCPServer:
             "identitycenter_": "identitycenter",
             "verifiedaccess_": "verifiedaccess",
             "vpclattice_": "vpclattice",
+            "security_audit_": "security_audit"
 
         }
         
