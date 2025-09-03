@@ -36,7 +36,37 @@ class EC2SecurityService(BaseAWSService):
             elif name == "ec2_audit_key_pairs":
                 return {"key_pairs": self.ec2_client.describe_key_pairs().get("KeyPairs", [])}
             elif name == "ec2_audit_security_groups":
-                sgs = self.ec2_client.describe_security_groups().get("SecurityGroups", [])
+                sgs = self.client.describe_security_groups().get("SecurityGroups", [])
+                risky_sgs = []
+                
+                for sg in sgs:
+                    risks = []
+                    
+                    # Check inbound rules
+                    for rule in sg.get("IpPermissions", []):
+                        for ip_range in rule.get("IpRanges", []):
+                            if ip_range.get("CidrIp") == "0.0.0.0/0":
+                                port_range = f"{rule.get('FromPort', '*')}-{rule.get('ToPort', '*')}"
+                                risks.append(f"Open inbound access on ports {port_range}")
+                        
+                        # Check for sensitive ports
+                        if rule.get("FromPort") in [22, 3389, 3306, 1433, 6379, 27017]:
+                            risks.append(f"Sensitive port {rule.get('FromPort')} exposed")
+                    
+                    # Check outbound rules
+                    for rule in sg.get("IpPermissionsEgress", []):
+                        if any(ip.get("CidrIp") == "0.0.0.0/0" for ip in rule.get("IpRanges", [])):
+                            risks.append("Unrestricted outbound access")
+                    
+                    if risks:
+                        risky_sgs.append({
+                            "group_id": sg["GroupId"],
+                            "group_name": sg["GroupName"],
+                            "risks": risks,
+                            "severity": "HIGH" if any("Open inbound" in r for r in risks) else "MEDIUM"
+                        })
+                
+                return {"risky_security_groups": risky_sgs, "total": len(risky_sgs)}
                 risky = [sg for sg in sgs if any("0.0.0.0/0" in str(rule) for rule in sg.get("IpPermissions", []))]
                 return {"risky_security_groups": risky}
             elif name == "ec2_describe_vpc_endpoints":
