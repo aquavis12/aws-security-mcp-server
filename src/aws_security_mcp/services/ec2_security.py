@@ -163,6 +163,21 @@ class EC2SecurityService:
                         }
                     }
                 }
+            ),
+            types.Tool(
+                name="ec2_describe_vpc_endpoints",
+                description="List VPC endpoints",
+                inputSchema={"type": "object", "properties": {}}
+            ),
+            types.Tool(
+                name="ec2_describe_flow_logs",
+                description="List VPC flow logs",
+                inputSchema={"type": "object", "properties": {}}
+            ),
+            types.Tool(
+                name="s3_audit_bucket_security",
+                description="Comprehensive S3 bucket security audit",
+                inputSchema={"type": "object", "properties": {}}
             )
         ]
 
@@ -183,6 +198,16 @@ class EC2SecurityService:
                 return await self._get_bucket_public_access_block(arguments)
             elif name == "ec2_describe_instances":
                 return await self._describe_instances(arguments)
+            elif name == "ec2_audit_key_pairs":
+                return await self._audit_key_pairs(arguments)
+            elif name == "ec2_audit_security_groups":
+                return await self._audit_security_groups(arguments)
+            elif name == "ec2_describe_vpc_endpoints":
+                return await self._describe_vpc_endpoints()
+            elif name == "ec2_describe_flow_logs":
+                return await self._describe_flow_logs()
+            elif name == "s3_audit_bucket_security":
+                return await self._audit_bucket_security()
             else:
                 raise ValueError(f"Unknown EC2 Security tool: {name}")
 
@@ -311,3 +336,54 @@ class EC2SecurityService:
             "total_count": len(instances),
             "next_token": response.get("NextToken")
         }
+
+    async def _audit_key_pairs(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Audit EC2 key pairs."""
+        response = self.ec2_client.describe_key_pairs()
+        return {"key_pairs": response.get("KeyPairs", [])}
+
+    async def _audit_security_groups(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Audit security groups for risky configurations."""
+        response = self.ec2_client.describe_security_groups()
+        risky_groups = []
+        for sg in response.get("SecurityGroups", []):
+            for rule in sg.get("IpPermissions", []):
+                for ip_range in rule.get("IpRanges", []):
+                    if ip_range.get("CidrIp") == "0.0.0.0/0":
+                        risky_groups.append(sg)
+                        break
+        return {"risky_security_groups": risky_groups}
+
+    async def _describe_vpc_endpoints(self) -> Dict[str, Any]:
+        """List VPC endpoints."""
+        response = self.ec2_client.describe_vpc_endpoints()
+        return {"vpc_endpoints": response.get("VpcEndpoints", [])}
+
+    async def _describe_flow_logs(self) -> Dict[str, Any]:
+        """List VPC flow logs."""
+        response = self.ec2_client.describe_flow_logs()
+        return {"flow_logs": response.get("FlowLogs", [])}
+
+    async def _audit_bucket_security(self) -> Dict[str, Any]:
+        """Comprehensive S3 bucket security audit."""
+        buckets_response = self.s3_client.list_buckets()
+        audit_results = []
+        for bucket in buckets_response.get("Buckets", []):
+            bucket_name = bucket["Name"]
+            result = {"bucket_name": bucket_name, "issues": []}
+            
+            # Check encryption
+            try:
+                self.s3_client.get_bucket_encryption(Bucket=bucket_name)
+            except ClientError:
+                result["issues"].append("No encryption configured")
+            
+            # Check public access block
+            try:
+                self.s3_client.get_public_access_block(Bucket=bucket_name)
+            except ClientError:
+                result["issues"].append("No public access block configured")
+            
+            audit_results.append(result)
+        
+        return {"bucket_security_audit": audit_results}

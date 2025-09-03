@@ -127,9 +127,15 @@ This document lists all 80+ security tools available in the AWS Security MCP Ser
 - `vpclattice_list_service_networks` - List service networks
 - `vpclattice_get_auth_policy` - Get VPC Lattice auth policy
 
+## Security Audit (Comprehensive Reporting) - 2 Tools
+- `security_audit_generate_report` - Generate comprehensive security audit report with executive summary
+- `security_audit_quick_scan` - Quick security scan for immediate issue detection
+
 ## Tool Categories by Use Case
 
 ### 🔍 **Security Auditing & Compliance**
+- Comprehensive security audit reports with executive summaries
+- Quick security scans for immediate issue detection
 - IAM audit tools (inactive users, unrotated keys, MFA status)
 - Security group auditing
 - S3 bucket security analysis
@@ -175,6 +181,8 @@ This document lists all 80+ security tools available in the AWS Security MCP Ser
 - "List security groups that allow access from 0.0.0.0/0"
 
 - "Find all S3 buckets without encryption"
+- "Generate a comprehensive security audit report"
+- "Run a quick security scan for immediate issues"
 - "Show users without MFA enabled"
 
 ### Direct Tool Calls
@@ -185,7 +193,7 @@ This document lists all 80+ security tools available in the AWS Security MCP Ser
 }
 ```
 
-## Total Tool Count: 78+ Tools
+## Total Tool Count: 80+ Tools
 - **21 AWS Services** covered
 - **Comprehensive security coverage** across all major AWS security domains
 - **Real-time auditing** capabilities

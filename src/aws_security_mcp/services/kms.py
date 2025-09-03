@@ -62,6 +62,16 @@ class KMSService:
                     },
                     "required": ["key_id"]
                 }
+            ),
+            types.Tool(
+                name="kms_list_aliases",
+                description="List KMS key aliases",
+                inputSchema={"type": "object", "properties": {}}
+            ),
+            types.Tool(
+                name="kms_audit_key_usage",
+                description="Audit KMS key usage and permissions",
+                inputSchema={"type": "object", "properties": {}}
             )
         ]
 
@@ -74,6 +84,10 @@ class KMSService:
                 return await self._describe_key(arguments)
             elif name == "kms_get_key_rotation_status":
                 return await self._get_key_rotation_status(arguments)
+            elif name == "kms_list_aliases":
+                return await self._list_aliases()
+            elif name == "kms_audit_key_usage":
+                return await self._audit_key_usage()
             else:
                 raise ValueError(f"Unknown KMS tool: {name}")
 
@@ -132,3 +146,31 @@ class KMSService:
             "key_id": key_id,
             "key_rotation_enabled": response["KeyRotationEnabled"]
         }
+
+    async def _list_aliases(self) -> Dict[str, Any]:
+        """List KMS key aliases."""
+        response = self.client.list_aliases()
+        return {"aliases": response.get("Aliases", [])}
+
+    async def _audit_key_usage(self) -> Dict[str, Any]:
+        """Audit KMS key usage and permissions."""
+        keys_response = self.client.list_keys()
+        audit_results = []
+        
+        for key in keys_response.get("Keys", []):
+            key_id = key["KeyId"]
+            try:
+                key_details = self.client.describe_key(KeyId=key_id)
+                rotation_status = self.client.get_key_rotation_status(KeyId=key_id)
+                
+                audit_results.append({
+                    "key_id": key_id,
+                    "enabled": key_details["KeyMetadata"]["Enabled"],
+                    "key_state": key_details["KeyMetadata"]["KeyState"],
+                    "rotation_enabled": rotation_status["KeyRotationEnabled"],
+                    "key_manager": key_details["KeyMetadata"]["KeyManager"]
+                })
+            except ClientError:
+                continue
+        
+        return {"key_audit_results": audit_results}
